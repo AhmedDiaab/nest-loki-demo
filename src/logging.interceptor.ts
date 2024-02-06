@@ -8,7 +8,7 @@ export class LoggingInterceptor implements NestInterceptor {
     private logger: LokiLogger;
 
     constructor() {
-        this.logger = new LokiLogger('LoggingInterceptor', { loki: true, console: false, fallbackToFile: true });
+        this.logger = new LokiLogger(LoggingInterceptor.name, { loki: true, console: false, fallbackToFile: true });
     }
 
     intercept(context: ExecutionContext, next: CallHandler): Observable<any> {
@@ -42,7 +42,7 @@ export class LoggingInterceptor implements NestInterceptor {
                     response,
                     request: req.body || ''
                 };
-                await this.logger.log(JSON.stringify(message));
+                await this.logger.log(message);
             }));
 
     }
