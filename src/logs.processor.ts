@@ -1,11 +1,33 @@
-import { Process, Processor } from "@nestjs/bull";
+import { Processor, Process } from '@nestjs/bull';
+import { Job } from 'bull';
+import { LOGS_QUEUE } from './logs.token';
+import { LokiLogger } from './logger';
+import { EventEmitter2 } from '@nestjs/event-emitter';
+import { ProcessLogsEvent } from './logs.events';
 
-
-@Processor('logs-queue')
+@Processor(LOGS_QUEUE)
 export class LogsProcessor {
 
-    @Process('namedjob')
-    async processNamedJob(job: any): Promise<any> {
-        // do something with job and job.data
+  constructor(private readonly logger: LokiLogger, private readonly emitter: EventEmitter2) {
+
+  }
+
+  @Process('log')
+  async transcode(job: Job<{ lines: string[] }>) {
+    let logs: Record<string, any>[];
+    try {
+      logs = job.data.lines.filter(line => line.length !== 0).map(line => {
+        if (line.length === 0) return;
+        return JSON.parse(line);
+      });
+      await this.logger.shipLogsToLoki(logs);
+    } catch (e) {
+      console.log(e)
+      throw e;
     }
+    this.emitter.emit(ProcessLogsEvent); // emit event to restart this cycle
+    return { logs }
+  }
+
+
 }
