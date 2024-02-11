@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { EventEmitter2, OnEvent } from '@nestjs/event-emitter';
-import { ProcessLogsEvent } from './logs.events';
+import { MarkRetrialFlag, ProcessLogsEvent, RetryFailedLogsEvent } from './logs.events';
 import { join } from 'path';
 import { readFile, readdir, unlink, writeFile } from 'fs/promises';
 import { InjectQueue } from '@nestjs/bull';
@@ -10,6 +10,7 @@ import { LOGS_QUEUE } from './logs.token';
 @Injectable()
 export class LogsListener {
     private readonly logsDirectory: string;
+    private _jobsBeingRetried: boolean = false;
     constructor(@InjectQueue(LOGS_QUEUE) private queue: Queue) {
         this.logsDirectory = join(process.cwd(), 'logs');
     }
@@ -81,6 +82,19 @@ export class LogsListener {
         if (!lines) return;
         // ship these linses to queue
         this.queue.add('log', { lines });
+    }
+
+    @OnEvent(RetryFailedLogsEvent, { async: true })
+    async retryFailedLogs() {
+        if (this._jobsBeingRetried) return;
+        const failedJobs = await this.queue.getFailed();
+        await Promise.all(failedJobs.map(job => job.retry()));
+    }
+
+    @OnEvent(MarkRetrialFlag)
+    markRetrialFlag() {
+        if (!this._jobsBeingRetried) return;
+        this._jobsBeingRetried = false;
     }
 
 }
