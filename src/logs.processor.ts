@@ -3,7 +3,7 @@ import { Job } from 'bull';
 import { LOGS_QUEUE, LOGS_REDIS } from './logs.token';
 import { LogLevel, LokiLogger } from './logger';
 import { EventEmitter2 } from '@nestjs/event-emitter';
-import { ProcessLogsEvent } from './logs.events';
+import { MarkRetrialFlag, ProcessLogsEvent, RetryFailedLogsEvent } from './logs.events';
 
 @Processor(LOGS_QUEUE)
 export class LogsProcessor {
@@ -31,8 +31,15 @@ export class LogsProcessor {
 
   @Process(LOGS_REDIS)
   async processLogs(job: Job<{ message: Record<string, any>, level: LogLevel, trace?: string }>) {
-    const log = job.data;
-    await this.logger.logToLoki(log.message, log.level, log.trace);
+    try {
+      const log = job.data;
+      await this.logger.logToLoki(log.message, log.level, log.trace);
+      // retry failed jobs
+      this.emitter.emit(RetryFailedLogsEvent)
+    } catch (e) {
+      this.emitter.emit(MarkRetrialFlag)
+      throw e;
+    }
   }
 
 
