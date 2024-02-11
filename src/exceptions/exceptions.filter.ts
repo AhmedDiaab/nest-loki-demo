@@ -5,7 +5,10 @@ import { LokiLogger } from 'src/logger';
 
 @Catch()
 export class ExceptionsFilter implements ExceptionFilter {
-  private readonly logger = new LokiLogger(ExceptionsFilter.name, { console: true, fallbackToFile: true, loki: true });
+  constructor(private readonly lokiLogger: LokiLogger) {
+    this.lokiLogger.setContext(ExceptionsFilter.name);
+    this.lokiLogger.setOptions = { loki: true, console: true, fallbackToFile: true };
+  }
 
   async catch(exception: any, host: ArgumentsHost) {
     const ctx = host.switchToHttp();
@@ -59,7 +62,7 @@ export class ExceptionsFilter implements ExceptionFilter {
       request: req.body || ''
 
     }
-    await this.logger.error(log, exception.stack);
+    await this.lokiLogger.error(log, exception.stack);
     response.status(status).json(responseBody);
   }
 }
