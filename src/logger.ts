@@ -1,9 +1,12 @@
-import { LoggerService, ConsoleLogger, Inject, Injectable } from "@nestjs/common";
+import { LoggerService, ConsoleLogger, Injectable } from "@nestjs/common";
 import { EventEmitter2 } from "@nestjs/event-emitter";
 import * as axios from 'axios';
 import { createLogger, Logger } from 'winston';
 import * as DRTransport from 'winston-daily-rotate-file';
 import { ProcessLogsEvent } from "./logs.events";
+import { Queue } from "bull";
+import { InjectQueue } from "@nestjs/bull";
+import { LOGS_QUEUE, LOGS_REDIS } from "./logs.token";
 
 export type LogOptions = {
     console: boolean;
@@ -25,7 +28,7 @@ type LokiStreamInfo = {
     service?: string;
 }
 
-type LogLevel = 'info' | 'error' | 'warn' | 'debug';
+export type LogLevel = 'info' | 'error' | 'warn' | 'debug';
 
 @Injectable()
 export class LokiLogger extends ConsoleLogger implements LoggerService {
@@ -41,7 +44,7 @@ export class LokiLogger extends ConsoleLogger implements LoggerService {
     }
 
 
-    constructor(private readonly emitter: EventEmitter2, context: string) {
+    constructor(private readonly emitter: EventEmitter2, @InjectQueue(LOGS_QUEUE) private readonly queue: Queue, context: string) {
         super(context);
         this.serviceName = context;
 
@@ -71,30 +74,37 @@ export class LokiLogger extends ConsoleLogger implements LoggerService {
         });
     }
 
-    async log(message: Record<string, any>) {
+    log(message: Record<string, any>) {
         this._options.console && super.log(message);
-        await this._fallbackToFile(message, 'info');
+        this._appendToQueue(message, 'info');
     }
 
-    async error(message: Record<string, any>, trace: string) {
+    error(message: Record<string, any>, trace: string) {
         this._options.console && super.error(message, trace);
-        await this._fallbackToFile(message, 'error', trace);
+        this._appendToQueue(message, 'error', trace);
     }
 
-    async warn(message: Record<string, any>) {
+    warn(message: Record<string, any>) {
         this._options.console && super.warn(message);
-        await this._fallbackToFile(message, 'warn');
+        this._appendToQueue(message, 'warn');
     }
 
-    async debug(message: Record<string, any>) {
+    debug(message: Record<string, any>) {
         this._options.console && super.debug(message);
-        await this._fallbackToFile(message, 'debug');
+        this._appendToQueue(message, 'debug');
+    }
+
+    /**
+     * Adds job into redis queue with these logs
+     */
+    private _appendToQueue(message: Record<string, any>, level: LogLevel, trace?: string) {
+        this.queue.add(LOGS_REDIS, { message, level, trace });
     }
 
     /**
      * Sends log to loki one by one
      */
-    private async _logToLoki(message: Record<string, any>, level: LogLevel, trace?: string) {
+    async logToLoki(message: Record<string, any>, level: LogLevel, trace?: string) {
         if (trace) message.trace = trace;
         message.level = level;
         const log: LokiLog = {
@@ -136,7 +146,7 @@ export class LokiLogger extends ConsoleLogger implements LoggerService {
 
     private async _fallbackToFile(message: Record<string, any>, level: LogLevel, trace?: string) {
         try {
-            this._options.loki && await this._logToLoki(message, level, trace);
+            this._options.loki && await this.logToLoki(message, level, trace);
             !this.firedEvent && this.emitter.emit(ProcessLogsEvent);
             if (this.firedEvent === false) this.firedEvent = true; // TODO: uncomment this code
         } catch (_) {
