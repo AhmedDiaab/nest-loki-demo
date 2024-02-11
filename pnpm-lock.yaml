@@ -5,6 +5,9 @@ settings:
   excludeLinksFromLockfile: false
 
 dependencies:
+  '@bull-board/api':
+    specifier: ^5.14.0
+    version: registry.npmjs.org/@bull-board/api@5.14.0(@bull-board/ui@5.14.0)
   '@bull-board/express':
     specifier: ^5.14.0
     version: registry.npmjs.org/@bull-board/express@5.14.0
@@ -32,6 +35,9 @@ dependencies:
   axios:
     specifier: ^1.6.5
     version: registry.npmjs.org/axios@1.6.5
+  bull:
+    specifier: ^4.12.2
+    version: registry.npmjs.org/bull@4.12.2
   reflect-metadata:
     specifier: ^0.1.13
     version: registry.npmjs.org/reflect-metadata@0.1.14
