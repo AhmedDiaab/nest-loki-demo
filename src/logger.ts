@@ -1,9 +1,8 @@
-import { LoggerService, ConsoleLogger, Inject } from "@nestjs/common";
+import { LoggerService, ConsoleLogger, Inject, Injectable } from "@nestjs/common";
 import { EventEmitter2 } from "@nestjs/event-emitter";
 import * as axios from 'axios';
 import { createLogger, Logger } from 'winston';
 import * as DRTransport from 'winston-daily-rotate-file';
-import { EVENT_EMITTER_TOKEN } from "./event-emitter.token";
 import { ProcessLogsEvent } from "./logs.events";
 
 export type LogOptions = {
@@ -23,24 +22,28 @@ type LokiStream = {
 
 type LokiStreamInfo = {
     env: string;
-    service: string;
+    service?: string;
 }
 
 type LogLevel = 'info' | 'error' | 'warn' | 'debug';
 
+@Injectable()
 export class LokiLogger extends ConsoleLogger implements LoggerService {
 
-    private readonly _options: LogOptions = { console: true, loki: false, fallbackToFile: true };
+    private _options: LogOptions = { console: true, loki: false, fallbackToFile: true };
     private readonly instance: axios.AxiosInstance;
     private readonly serviceName: string;
     private readonly logger: Logger;
     private firedEvent: boolean = false;
 
+    set setOptions(options: Partial<LogOptions>) {
+        this._options = { ...this._options, ...options };
+    }
 
-    constructor(context: string, options?: Partial<LogOptions>, @Inject(EVENT_EMITTER_TOKEN) private emitter?: EventEmitter2) {
+
+    constructor(private readonly emitter: EventEmitter2, context: string) {
         super(context);
         this.serviceName = context;
-        if (options) this._options = { ...this._options, ...options };
 
         // create logger
         this.logger = createLogger();
@@ -88,19 +91,42 @@ export class LokiLogger extends ConsoleLogger implements LoggerService {
         await this._fallbackToFile(message, 'debug');
     }
 
+    /**
+     * Sends log to loki one by one
+     */
     private async _logToLoki(message: Record<string, any>, level: LogLevel, trace?: string) {
         if (trace) message.trace = trace;
         message.level = level;
-        console.log(message)
         const log: LokiLog = {
             streams: [{
-                stream: { env: 'development', service: this.serviceName },
-                values: [[(Date.now() * 1e6).toString(), JSON.stringify(message)]]
+                stream: this.serviceName ? { env: 'development', service: this.serviceName } : { env: 'development' },
+                values: [[this._timestampToNanoSeconds(Date.now()), JSON.stringify(message)]]
             }]
         };
         try {
             await this.instance.post('/loki/api/v1/push', log);
-            // TODO: migrate files (if exist) to loki through background jobs
+        }
+        catch (e) {
+            // console.error('Could not log to loki | ', `Level=${level}`);
+            throw e;
+        }
+    }
+
+
+    /**
+     * Ships bulk of logs to loki at once
+     * Used in queue consumer
+     */
+    async shipLogsToLoki(messages: Record<string, any>[]) {
+        const logs: LokiLog = {
+            streams: [{
+                stream: this.serviceName ? { env: 'development', service: this.serviceName } : { env: 'development' },
+                values: messages.map(message => [this._timestampToNanoSeconds(message['datetime']), JSON.stringify(message)])  // TODO: change datetime to timestamp
+            }]
+        };
+
+        try {
+            await this.instance.post('/loki/api/v1/push', logs);
         }
         catch (e) {
             // console.error('Could not log to loki | ', `Level=${level}`);
@@ -111,10 +137,19 @@ export class LokiLogger extends ConsoleLogger implements LoggerService {
     private async _fallbackToFile(message: Record<string, any>, level: LogLevel, trace?: string) {
         try {
             this._options.loki && await this._logToLoki(message, level, trace);
-            !this.firedEvent && this.emitter.emit(ProcessLogsEvent) && (this.firedEvent = true);
+            !this.firedEvent && this.emitter.emit(ProcessLogsEvent);
+            if (this.firedEvent === false) this.firedEvent = true; // TODO: uncomment this code
         } catch (_) {
             this.logger.log(level, message);
-            this.firedEvent && (this.firedEvent = false);
+            if (this.firedEvent) this.firedEvent = false;
         }
+    }
+
+    /**
+     * Converts Date.now() or any date in form of ms to nanoseconds in string format
+     */
+    private _timestampToNanoSeconds(now: number) {
+        if (!now) now = (new Date()).getTime(); // handle if no date then get the date of now
+        return (new Date(now).getTime() * 1e6).toString();
     }
 }

@@ -5,10 +5,10 @@ import { LokiLogger } from './logger';
 
 @Injectable()
 export class LoggingInterceptor implements NestInterceptor {
-    private logger: LokiLogger;
 
-    constructor() {
-        this.logger = new LokiLogger(LoggingInterceptor.name, { loki: true, console: false, fallbackToFile: true });
+    constructor(private readonly logger: LokiLogger) {
+        this.logger.setContext(LoggingInterceptor.name);
+        this.logger.setOptions = { console: true, loki: true, fallbackToFile: true };
     }
 
     intercept(context: ExecutionContext, next: CallHandler): Observable<any> {
@@ -25,7 +25,7 @@ export class LoggingInterceptor implements NestInterceptor {
                 const statusCode = res.statusCode;
                 const contentLength = req.headers['content-length'] || '0';
                 const ip = req.ip;
-                const datetime = new Date();
+                const datetime = new Date(); // TODO: convert name to timestamp
                 const protocol = req.protocol;
                 const reqId = randomUUID();
                 const message = {
