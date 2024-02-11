@@ -1,7 +1,7 @@
 import { Processor, Process } from '@nestjs/bull';
 import { Job } from 'bull';
-import { LOGS_QUEUE } from './logs.token';
-import { LokiLogger } from './logger';
+import { LOGS_QUEUE, LOGS_REDIS } from './logs.token';
+import { LogLevel, LokiLogger } from './logger';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { ProcessLogsEvent } from './logs.events';
 
@@ -13,7 +13,7 @@ export class LogsProcessor {
   }
 
   @Process('log')
-  async transcode(job: Job<{ lines: string[] }>) {
+  async log(job: Job<{ lines: string[] }>) {
     let logs: Record<string, any>[];
     try {
       logs = job.data.lines.filter(line => line.length !== 0).map(line => {
@@ -27,6 +27,12 @@ export class LogsProcessor {
     }
     this.emitter.emit(ProcessLogsEvent); // emit event to restart this cycle
     return { logs }
+  }
+
+  @Process(LOGS_REDIS)
+  async processLogs(job: Job<{ message: Record<string, any>, level: LogLevel, trace?: string }>) {
+    const log = job.data;
+    await this.logger.logToLoki(log.message, log.level, log.trace);
   }
 
 
