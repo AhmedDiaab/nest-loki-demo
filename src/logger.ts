@@ -44,7 +44,7 @@ export class LokiLogger extends ConsoleLogger implements LoggerService {
     }
 
 
-    constructor(private readonly emitter: EventEmitter2, @InjectQueue(LOGS_QUEUE) private readonly queue: Queue, context: string) {
+    constructor(context: string, private readonly emitter: EventEmitter2, @InjectQueue(LOGS_QUEUE) private readonly queue: Queue) {
         super(context);
         this.serviceName = context;
 
