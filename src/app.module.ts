@@ -23,10 +23,13 @@ import { LogsProcessor } from './logs.processor';
       redis: {
         host: 'localhost',
         port: 6379,
-      }
+      },
     }),
     BullModule.registerQueue({
-      name: LOGS_QUEUE
+      name: LOGS_QUEUE,
+      defaultJobOptions: {
+        removeOnComplete: true,
+      }
     }),
     BullBoardModule.forRoot({
       route: '/queues',
