@@ -61,7 +61,7 @@ export class ExceptionsFilter implements ExceptionFilter {
       request: req.body || ''
 
     }
-    this.lokiLogger.error(log, exception.stack);
+    // this.lokiLogger.error(log, exception.stack);
     response.status(status).json(responseBody);
   }
 }
