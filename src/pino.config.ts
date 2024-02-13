@@ -1,6 +1,6 @@
 import { randomUUID } from "crypto";
 import { Params } from "nestjs-pino";
-import { stdSerializers } from "pino";
+import { stdSerializers, destination } from "pino";
 
 export const PinoConfig: Params = {
     pinoHttp: {
@@ -27,5 +27,10 @@ export const PinoConfig: Params = {
             }
             return 'info'
         },
+        stream: destination({
+            dest: `logs/log-${new Date().toISOString().slice(0, 10)}.log`,
+            minLength: 4096,
+            sync: false
+        })
     }
 } 
