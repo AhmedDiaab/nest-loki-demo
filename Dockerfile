@@ -10,11 +10,14 @@ WORKDIR /app
 # install pnpm
 RUN npm install -g pnpm
 
+# install nest
+RUN npm i -g @nestjs/cli
+
 # Install dependencies
-RUN pnpm install
+RUN pnpm i
 
 # Expose the port your app runs on
-EXPOSE 3030
+EXPOSE 3020
 
 # Start the application
-CMD ["npm", "run", "start:dev"]
+CMD ["pnpm", "start:dev"]
