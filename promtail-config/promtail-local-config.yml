@@ -8,7 +8,7 @@ scrape_configs:
   - job_name: system
     static_configs:
       - targets:
-          - localhost
+          - http://nest-app:3020
         labels:
-          job: varlogs
-          __path__: /var/log/*log
+          job: app-logs
+          __path__: /app/logs/*log

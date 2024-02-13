@@ -7,10 +7,9 @@ import { LokiLogger } from 'src/logger';
 export class ExceptionsFilter implements ExceptionFilter {
   constructor(private readonly lokiLogger: LokiLogger) {
     this.lokiLogger.setContext(ExceptionsFilter.name);
-    this.lokiLogger.setOptions = { loki: true, console: true, fallbackToFile: true };
   }
 
-  async catch(exception: any, host: ArgumentsHost) {
+  catch(exception: any, host: ArgumentsHost) {
     const ctx = host.switchToHttp();
     const response = ctx.getResponse<Response>();
     const status =
@@ -62,7 +61,7 @@ export class ExceptionsFilter implements ExceptionFilter {
       request: req.body || ''
 
     }
-    await this.lokiLogger.error(log, exception.stack);
+    this.lokiLogger.error(log, exception.stack);
     response.status(status).json(responseBody);
   }
 }

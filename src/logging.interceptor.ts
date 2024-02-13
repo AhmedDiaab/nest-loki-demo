@@ -8,7 +8,6 @@ export class LoggingInterceptor implements NestInterceptor {
 
     constructor(private readonly logger: LokiLogger) {
         this.logger.setContext(LoggingInterceptor.name);
-        this.logger.setOptions = { console: true, loki: true, fallbackToFile: true };
     }
 
     intercept(context: ExecutionContext, next: CallHandler): Observable<any> {
@@ -19,7 +18,7 @@ export class LoggingInterceptor implements NestInterceptor {
         const userAgent = req.get('user-agent') || '';
 
         return next.handle().pipe(
-            tap(async (response) => {
+            tap((response) => {
                 const res = context.switchToHttp().getResponse();
                 const delay = Date.now() - now;
                 const statusCode = res.statusCode;
@@ -42,7 +41,7 @@ export class LoggingInterceptor implements NestInterceptor {
                     response,
                     request: req.body || ''
                 };
-                await this.logger.log(message);
+                this.logger.log(message);
             }));
 
     }
