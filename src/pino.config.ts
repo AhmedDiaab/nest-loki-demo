@@ -17,18 +17,8 @@ export const PinoConfig: Params = {
             res: stdSerializers.res,
         },
         redact: [], // sanitize here
-        customLogLevel: function (req, res, err) {
-            if (res.statusCode >= 400 && res.statusCode < 500) {
-                return 'warn'
-            } else if (res.statusCode >= 500 || err) {
-                return 'error'
-            } else if (res.statusCode >= 300 && res.statusCode < 400) {
-                return 'silent'
-            }
-            return 'info'
-        },
         stream: destination({
-            dest: `logs/log-${new Date().toISOString().slice(0, 10)}.log`,
+            dest: `logs/logs.log`,
             minLength: 4096,
             sync: false
         })

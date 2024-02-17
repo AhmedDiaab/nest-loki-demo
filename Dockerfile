@@ -1,6 +1,9 @@
 # Use the official Node.js image as the base image
 FROM node:18-slim
 
+# install logrotate
+RUN apt-get update && apt-get install -y logrotate
+
 # Copy the entire application to the working directory
 COPY . /app
 

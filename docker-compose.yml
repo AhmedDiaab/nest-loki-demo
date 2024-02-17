@@ -13,7 +13,7 @@ services:
   promtail:
     image: grafana/promtail:latest
     volumes:
-      - /var/log:/var/log
+      - ./logs:/app/logs
       - ./promtail-config:/etc/promtail
     command: -config.file=/etc/promtail/promtail-local-config.yml
 
@@ -39,3 +39,6 @@ services:
       - '3020:3020'
     environment:
       NODE_ENV: development
+    volumes:
+      - ./logrotate.d:/etc/logrotate.d
+      - ./logs:/app/logs
