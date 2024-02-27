@@ -40,10 +40,11 @@ export class ExceptionsFilter implements ExceptionFilter {
     const contentLength = req.headers['content-length'] || '0';
     const now = Date.now();
     const delay = Date.now() - now;
-
+    const modifiedStack = exception?.stack?.match(/at (.*)/)[1];
     const responseBody = {
       statusCode: status,
       message: errorMessage,
+      stack: modifiedStack
     };
 
     const log = {
@@ -58,6 +59,7 @@ export class ExceptionsFilter implements ExceptionFilter {
       contentLength,
       responseTime: `${delay}ms`,
       response: JSON.stringify(responseBody),
+      error: modifiedStack,
       request: req.body || ''
 
     }
