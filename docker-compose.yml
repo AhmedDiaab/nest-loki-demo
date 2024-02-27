@@ -9,6 +9,8 @@ services:
     volumes:
       - ./loki-config:/etc/loki
       - ./wal:/wal
+      - ./data/loki/storage:/data/loki/storage
+      - ./var/loki/compactor:/var/loki/compactor
 
   promtail:
     image: grafana/promtail:latest
@@ -30,15 +32,17 @@ services:
     ports:
       - '3000:3000'
 
-  loki-demo-app:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    container_name: nest-app
-    ports:
-      - '3020:3020'
-    environment:
-      NODE_ENV: development
-    volumes:
-      - ./logrotate.d:/etc/logrotate.d
-      - ./logs:/app/logs
+  # loki-demo-app:
+  #   build:
+  #     context: .
+  #     dockerfile: Dockerfile
+  #   container_name: nest-app
+  #   ports:
+  #     - '3020:3020'
+  #   environment:
+  #     NODE_ENV: development
+  #   volumes:
+  #     - ./logrotate.d:/etc/logrotate.d
+  #     - ./logs:/app/logs
+  #     - ./data/loki/storage:/data/loki/storage
+  #     - ./var/loki/compactor:/var/loki/compactor

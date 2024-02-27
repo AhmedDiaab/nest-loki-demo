@@ -12,3 +12,10 @@ scrape_configs:
         labels:
           job: app-logs
           __path__: /app/logs/logs.log
+    pipeline_stages:
+      - match:
+          selector: '{job="contact_now_staging"}'
+          stages:
+            - drop:
+                expression: ELB-HealthChecker\/2.0
+                drop_counter_reason: "health check"
