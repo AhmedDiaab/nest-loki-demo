@@ -1,4 +1,4 @@
-import { Injectable, NestInterceptor, ExecutionContext, CallHandler, Logger } from '@nestjs/common';
+import { Injectable, NestInterceptor, ExecutionContext, CallHandler } from '@nestjs/common';
 import { randomUUID } from 'crypto';
 import { Observable, tap } from 'rxjs';
 import { LokiLogger } from './logger';
@@ -24,13 +24,13 @@ export class LoggingInterceptor implements NestInterceptor {
                 const statusCode = res.statusCode;
                 const contentLength = req.headers['content-length'] || '0';
                 const ip = req.ip;
-                const datetime = new Date(); // TODO: convert name to timestamp
+                const timestamp = new Date(); // TODO: convert name to timestamp
                 const protocol = req.protocol;
                 const reqId = randomUUID();
                 const message = {
                     requestId: `[${reqId}]`,
                     ip,
-                    datetime,
+                    timestamp,
                     method,
                     url,
                     userAgent,
