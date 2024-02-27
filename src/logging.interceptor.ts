@@ -1,7 +1,8 @@
 import { Injectable, NestInterceptor, ExecutionContext, CallHandler } from '@nestjs/common';
 import { randomUUID } from 'crypto';
-import { Observable, tap } from 'rxjs';
+import { Observable, catchError, tap } from 'rxjs';
 import { LokiLogger } from './logger';
+import { LogEntryDto } from './log-entry.dto';
 
 @Injectable()
 export class LoggingInterceptor implements NestInterceptor {
@@ -18,31 +19,33 @@ export class LoggingInterceptor implements NestInterceptor {
         const userAgent = req.get('user-agent') || '';
 
         return next.handle().pipe(
-            tap((response) => {
-                const res = context.switchToHttp().getResponse();
-                const delay = Date.now() - now;
-                const statusCode = res.statusCode;
-                const contentLength = req.headers['content-length'] || '0';
-                const ip = req.ip;
-                const timestamp = new Date(); // TODO: convert name to timestamp
-                const protocol = req.protocol;
-                const reqId = randomUUID();
-                const message = {
-                    requestId: `[${reqId}]`,
-                    ip,
-                    timestamp,
-                    method,
-                    url,
-                    userAgent,
-                    protocol,
-                    statusCode,
-                    contentLength,
-                    responseTime: `${delay}ms`,
-                    response,
-                    request: req.body || ''
-                };
-                this.logger.log(message);
-            }));
+            tap(
+                (response) => {
+                    const res = context.switchToHttp().getResponse();
+                    const delay = Date.now() - now;
+                    const statusCode = res.statusCode;
+                    const contentLength = req.headers['content-length'] || '0';
+                    const ip = req.ip;
+                    const timestamp = new Date(); // TODO: convert name to timestamp
+                    const protocol = req.protocol;
+                    const reqId = randomUUID();
+                    const message: LogEntryDto = {
+                        requestId: `[${reqId}]`,
+                        ip,
+                        timestamp,
+                        method,
+                        url,
+                        userAgent,
+                        protocol,
+                        statusCode,
+                        contentLength,
+                        responseTime: delay,
+                        response,
+                        request: req.body || ''
+                    };
+                    this.logger.log(message);
+                })
+        );
 
     }
 }
