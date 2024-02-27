@@ -73,7 +73,8 @@ export class LokiLogger extends ConsoleLogger implements LoggerService {
     }
 
     error(message: Record<string, any>, trace: string) {
-        this.logger.log('error', { ...message, trace });
+        const errorStack = trace?.match(/at (.*)/)[1];
+        this.logger.log('error', { ...message, errorStack });
     }
 
     warn(message: Record<string, any>) {
